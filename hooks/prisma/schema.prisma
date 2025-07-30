@@ -41,15 +41,17 @@ model Action {
   id  String @id @default (uuid())
   ZapId  String
   zap Zap  @relation(fields:[ZapId] , references:[id])
+  acitionId String
   type  AvailableAction @relation(fields : [acitionId],references : [id])
   
 }
 
-model AvailableAction(){
-  id  String  @id @default(uuid())
-  name  String
+model AvailableAction {
+  id      String   @id @default(uuid())
+  name    String
   actions Action[]
 
+  @@map("available_actions")  // Optional: maps to database table name
 }
 
 
