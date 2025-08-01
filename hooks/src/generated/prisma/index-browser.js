@@ -154,14 +154,35 @@ exports.Prisma.AvailableTriggersScalarFieldEnum = {
   name: 'name'
 };
 
+exports.Prisma.ZapRunScalarFieldEnum = {
+  id: 'id',
+  ZapId: 'ZapId',
+  metadata: 'metadata'
+};
+
+exports.Prisma.ZapRunOutboxScalarFieldEnum = {
+  id: 'id',
+  zapRunId: 'zapRunId'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
 };
 
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
+};
+
 exports.Prisma.QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
 };
 
 
@@ -171,7 +192,9 @@ exports.Prisma.ModelName = {
   Trigger: 'Trigger',
   Action: 'Action',
   AvailableAction: 'AvailableAction',
-  AvailableTriggers: 'AvailableTriggers'
+  AvailableTriggers: 'AvailableTriggers',
+  ZapRun: 'ZapRun',
+  ZapRunOutbox: 'ZapRunOutbox'
 };
 
 /**

@@ -1,4 +1,4 @@
-// This is your Prisma schema file,
+ git push origin HEAD// This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
@@ -26,6 +26,7 @@ model Zap {
   triggerId String
   trigger   Trigger?
   actions   Action[]
+  ZapRuns   ZapRun[]
 }
 
 model Trigger {
@@ -56,4 +57,18 @@ model AvailableTriggers {
   id       String    @id @default(uuid())
   name     String
   triggers Trigger[]
+}
+
+model ZapRun {
+  id           String        @id @default(uuid())
+  ZapId        String
+  metadata     Json
+  zap          Zap           @relation(fields: [ZapId], references: [id])
+  zapRunOutbox ZapRunOutbox?
+}
+
+model ZapRunOutbox {
+  id       String @id @default(uuid())
+  zapRunId String @unique
+  zapRun   ZapRun @relation(fields: [zapRunId], references: [id])
 }
