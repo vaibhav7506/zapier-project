@@ -11,6 +11,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "https://zapier-project.vercel.app", 
   FRONTEND_URL,
 ].filter(Boolean);
 app.use(cors({ origin: allowedOrigins, credentials: true }));

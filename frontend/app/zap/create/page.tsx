@@ -11,16 +11,16 @@ import { useEffect, useState } from "react";
 
 // Custom hook to fetch available triggers and actions from your backend
 function useAvailableActionsAndTriggers() {
-  const [availableActions, setAvailableActions] = useState([]);
-  const [availableTriggers, setAvailableTriggers] = useState([]);
+  const [availableActions, setAvailableActions] = useState<any[]>([]);
+  const [availableTriggers, setAvailableTriggers] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const triggerRes = await axios.get(`${BACKEND_URL}/api/v1/trigger/available`);
+        const triggerRes = await axios.get<{ availableTriggers: any[] }>(`${BACKEND_URL}/api/v1/trigger/available`);
         setAvailableTriggers(triggerRes.data?.availableTriggers ?? []);
 
-        const actionRes = await axios.get(`${BACKEND_URL}/api/v1/action/available`);
+        const actionRes = await axios.get<{ availableActions: any[] }>(`${BACKEND_URL}/api/v1/action/available`);
         setAvailableActions(actionRes.data?.availableActions ?? []);
       } catch (e) {
         console.error("Error fetching available items:", e);
