@@ -19,6 +19,7 @@ model Zap {
   id           String   @id @default(uuid())
   triggerId    String
   userId       Int
+  isActive     Boolean  @default(true)
   trigger      Trigger?
   actions      Action[]
   zapRuns      ZapRun[]
@@ -62,6 +63,7 @@ model ZapRun {
   id           String        @id @default(uuid())
   zapId        String
   metadata     Json
+  createdAt    DateTime      @default(now())
   zap          Zap           @relation(fields: [zapId], references: [id])
   zapRunOutbox ZapRunOutbox?
   executions   ZapRunActionExecution[]

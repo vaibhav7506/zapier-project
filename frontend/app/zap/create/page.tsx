@@ -6,8 +6,8 @@ import { Input } from "@/components/Input";
 import { ZapCell } from "@/components/ZapCell";
 import { PrimaryButton } from "@/components/buttons/Primarybutton";
 import axios from "axios";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 // Custom hook to fetch available triggers and actions from your backend
 function useAvailableActionsAndTriggers() {
@@ -32,10 +32,36 @@ function useAvailableActionsAndTriggers() {
   return { availableActions, availableTriggers };
 }
 
+type EditableZap = {
+  id: string;
+  trigger: {
+    triggerId: string;
+    metadata: Record<string, unknown>;
+    type: { name: string };
+  };
+  actions: {
+    id: string;
+    sortingOrder: number;
+    metadata: Record<string, unknown>;
+    type: { id: string; name: string };
+  }[];
+};
+
 export default function CreateZapPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <ZapEditorPage />
+    </Suspense>
+  );
+}
+
+function ZapEditorPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editZapId = searchParams.get("edit");
   const { availableActions, availableTriggers } = useAvailableActionsAndTriggers();
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isLoadingZap, setIsLoadingZap] = useState(Boolean(editZapId));
   
   const [selectedTrigger, setSelectedTrigger] = useState<{
     id: string;
@@ -53,13 +79,53 @@ export default function CreateZapPage() {
   
   const [selectedModalIndex, setSelectedModalIndex] = useState<null | number>(null);
 
+  useEffect(() => {
+    if (!editZapId) return;
+
+    const loadZap = async () => {
+      try {
+        const response = await axios.get<{ zap: EditableZap | null }>(
+          `${BACKEND_URL}/api/v1/zap/${editZapId}`,
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } },
+        );
+        const zap = response.data.zap;
+        if (!zap) {
+          alert("Zap not found.");
+          router.push("/dashboard");
+          return;
+        }
+
+        setSelectedTrigger({ id: zap.trigger.triggerId, name: zap.trigger.type.name });
+        setSelectedActions(
+          [...zap.actions]
+            .sort((a, b) => a.sortingOrder - b.sortingOrder)
+            .map((action, index) => ({
+              index: index + 2,
+              availableActionId: action.type.id,
+              availableActionName: action.type.name,
+              metadata: action.metadata,
+            })),
+        );
+      } catch (error) {
+        console.error("Error loading Zap:", error);
+        alert("Failed to load Zap.");
+        router.push("/dashboard");
+      } finally {
+        setIsLoadingZap(false);
+      }
+    };
+
+    loadZap();
+  }, [editZapId, router]);
+
   const handlePublish = async () => {
-    if (!selectedTrigger?.id || isPublishing) return;
+    if (!selectedTrigger?.id || isPublishing || isLoadingZap) return;
     
     setIsPublishing(true);
     try {
-      await axios.post(
-        `${BACKEND_URL}/api/v1/zap`,
+      const request = editZapId ? axios.put : axios.post;
+      await request(
+        editZapId ? `${BACKEND_URL}/api/v1/zap/${editZapId}` : `${BACKEND_URL}/api/v1/zap`,
         {
           availableTriggerId: selectedTrigger.id,
           triggerMetadata: {},
@@ -89,11 +155,12 @@ export default function CreateZapPage() {
       {/* Top Publish Bar */}
       <div className="flex justify-end bg-white border-b p-4 sticky top-0 z-10">
         <PrimaryButton onClick={handlePublish}>
-          {isPublishing ? "Publishing..." : "Publish"}
+          {isPublishing ? "Saving..." : editZapId ? "Save changes" : "Publish"}
         </PrimaryButton>
       </div>
 
       <div className="w-full flex flex-col items-center px-4 py-12 space-y-4">
+        {isLoadingZap && <div className="text-slate-600">Loading Zap...</div>}
         {/* Trigger Cell */}
         <ZapCell
           onClick={() => setSelectedModalIndex(1)}
@@ -140,6 +207,11 @@ export default function CreateZapPage() {
         <Modal
           availableItems={selectedModalIndex === 1 ? availableTriggers : availableActions}
           index={selectedModalIndex}
+          initialMetadata={
+            selectedModalIndex === 1
+              ? {}
+              : selectedActions[selectedModalIndex - 2]?.metadata ?? {}
+          }
           onSelect={(props) => {
             if (props === null) {
               setSelectedModalIndex(null);
@@ -169,10 +241,11 @@ export default function CreateZapPage() {
 
 /** * MODAL COMPONENT 
  */
-function Modal({ index, onSelect, availableItems }: {
+function Modal({ index, onSelect, availableItems, initialMetadata }: {
   index: number;
   onSelect: (props: null | { name: string; id: string; metadata: any }) => void;
   availableItems: { id: string; name: string; image: string }[];
+  initialMetadata: Record<string, unknown>;
 }) {
   const [step, setStep] = useState(0);
   const [selectedAction, setSelectedAction] = useState<{ id: string; name: string }>();
@@ -188,11 +261,11 @@ function Modal({ index, onSelect, availableItems }: {
         <div className="p-6 overflow-y-auto">
           {/* Step 1: Specific Selectors based on Action Type */}
           {step === 1 && selectedAction?.id === "email" && (
-            <EmailSelector setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
+            <EmailSelector initialMetadata={initialMetadata} setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
           )}
 
           {step === 1 && selectedAction?.id === "send-sol" && (
-            <SolanaSelector setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
+            <SolanaSelector initialMetadata={initialMetadata} setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
           )}
 
           {/* Step 0: General Item List */}
@@ -225,27 +298,27 @@ function Modal({ index, onSelect, availableItems }: {
 
 /** * SELECTOR COMPONENTS 
  */
-function EmailSelector({ setMetadata }: { setMetadata: (m: any) => void }) {
-  const [email, setEmail] = useState("");
-  const [body, setBody] = useState("");
+function EmailSelector({ initialMetadata, setMetadata }: { initialMetadata: Record<string, unknown>; setMetadata: (m: any) => void }) {
+  const [email, setEmail] = useState(String(initialMetadata.email || ""));
+  const [body, setBody] = useState(String(initialMetadata.body || ""));
 
   return (
     <div className="space-y-4">
-      <Input label="To" placeholder="example@mail.com" onChange={(e) => setEmail(e.target.value)} />
-      <Input label="Body" placeholder="Hello there..." onChange={(e) => setBody(e.target.value)} />
+      <Input label="To" placeholder="example@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <Input label="Body" placeholder="Hello there..." value={body} onChange={(e) => setBody(e.target.value)} />
       <PrimaryButton onClick={() => setMetadata({ email, body })}>Continue</PrimaryButton>
     </div>
   );
 }
 
-function SolanaSelector({ setMetadata }: { setMetadata: (m: any) => void }) {
-  const [address, setAddress] = useState("");
-  const [amount, setAmount] = useState("");
+function SolanaSelector({ initialMetadata, setMetadata }: { initialMetadata: Record<string, unknown>; setMetadata: (m: any) => void }) {
+  const [address, setAddress] = useState(String(initialMetadata.address || ""));
+  const [amount, setAmount] = useState(String(initialMetadata.amount || ""));
 
   return (
     <div className="space-y-4">
-      <Input label="Solana Address" placeholder="0x..." onChange={(e) => setAddress(e.target.value)} />
-      <Input label="Amount (SOL)" placeholder="0.1" onChange={(e) => setAmount(e.target.value)} />
+      <Input label="Solana Address" placeholder="0x..." value={address} onChange={(e) => setAddress(e.target.value)} />
+      <Input label="Amount (SOL)" placeholder="0.1" value={amount} onChange={(e) => setAmount(e.target.value)} />
       <PrimaryButton onClick={() => setMetadata({ address, amount })}>Continue</PrimaryButton>
     </div>
   );

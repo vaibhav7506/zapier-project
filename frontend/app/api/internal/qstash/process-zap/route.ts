@@ -45,7 +45,11 @@ async function processZapRun(message: ZapRunMessage) {
   const zapRun = await prismaClient.zapRun.findFirst({
     where: { id: message.zapRunId },
     include: {
-      zap: { include: { actions: { include: { type: true } } } },
+      zap: {
+        include: {
+          actions: { include: { type: true }, orderBy: { sortingOrder: "asc" } },
+        },
+      },
     },
   });
   const action = zapRun?.zap.actions.find(

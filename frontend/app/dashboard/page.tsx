@@ -13,6 +13,7 @@ interface Zap {
   id: string;
   triggerId: string;
   userId: number;
+  isActive: boolean;
  
   // "createdAt": string,
   actions: {
@@ -65,14 +66,65 @@ function useZaps() {
       });
   }, [router]);
 
+  const toggleZap = async (zapId: string) => {
+    const token = localStorage.getItem("token");
+    const previousZaps = zaps;
+    const currentZap = zaps.find((zap) => zap.id === zapId);
+
+    if (!currentZap) return;
+
+    setZaps((current) =>
+      current.map((zap) =>
+        zap.id === zapId ? { ...zap, isActive: !zap.isActive } : zap,
+      ),
+    );
+
+    try {
+      const response = await axios.patch(
+        `${BACKEND_URL}/api/v1/zap/${zapId}/toggle`,
+        undefined,
+        { headers: { Authorization: token ? `Bearer ${token}` : "" } },
+      );
+      const isActive = (response.data as { zap: { isActive: boolean } }).zap.isActive;
+      setZaps((current) =>
+        current.map((zap) => (zap.id === zapId ? { ...zap, isActive } : zap)),
+      );
+    } catch (error) {
+      console.error("Error toggling Zap:", error);
+      setZaps(previousZaps);
+    }
+  };
+
+  const deleteZap = async (zapId: string) => {
+    if (!window.confirm("Delete this Zap and all of its execution history? This cannot be undone.")) {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    const previousZaps = zaps;
+    setZaps((current) => current.filter((zap) => zap.id !== zapId));
+
+    try {
+      await axios.delete(`${BACKEND_URL}/api/v1/zap/${zapId}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "" },
+      });
+    } catch (error) {
+      console.error("Error deleting Zap:", error);
+      setZaps(previousZaps);
+      alert("Failed to delete Zap.");
+    }
+  };
+
   return {
     loading,
     zaps,
+    toggleZap,
+    deleteZap,
   };
 }
 
 export default function DashboardPage() {
-  const { loading, zaps } = useZaps();
+  const { loading, zaps, toggleZap, deleteZap } = useZaps();
   const router = useRouter();
 
   return (
@@ -93,14 +145,22 @@ export default function DashboardPage() {
       ) : (
         <div className="flex justify-center overflow-x-auto">
           {" "}
-          <ZapTable zaps={zaps} />{" "}
+          <ZapTable zaps={zaps} onToggle={toggleZap} onDelete={deleteZap} />{" "}
         </div>
       )}
     </div>
   );
 }
 
-function ZapTable({ zaps }: { zaps: Zap[] }) {
+function ZapTable({
+  zaps,
+  onToggle,
+  onDelete,
+}: {
+  zaps: Zap[];
+  onToggle: (zapId: string) => void;
+  onDelete: (zapId: string) => void;
+}) {
   const router = useRouter();
 
   return (
@@ -111,7 +171,7 @@ function ZapTable({ zaps }: { zaps: Zap[] }) {
         <div className="flex-1 min-w-[100px]">ID</div>
         <div className="flex-1 min-w-[100px]">Created at</div>
         <div className="flex-1 min-w-[140px]">Webhook URL</div>
-        <div className="w-20 text-center">Actions</div>
+        <div className="w-64 text-center">Actions</div>
       </div>
 
       {/* Empty state */}
@@ -180,7 +240,29 @@ function ZapTable({ zaps }: { zaps: Zap[] }) {
             </div>
 
             {/* Action Button */}
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <ZapToggle zap={z} onToggle={onToggle} />
+              <button
+                type="button"
+                className="text-sm text-slate-700 hover:text-slate-900"
+                onClick={() => router.push(`/zap/${z.id}/runs`)}
+              >
+                View runs
+              </button>
+              <button
+                type="button"
+                className="text-sm text-blue-600 hover:text-blue-800"
+                onClick={() => router.push(`/zap/create?edit=${z.id}`)}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className="text-sm text-red-600 hover:text-red-800"
+                onClick={() => onDelete(z.id)}
+              >
+                Delete
+              </button>
               <LinkButton onClick={() => router.push("/zap/" + z.id)}>
                 View Details
               </LinkButton>
@@ -239,7 +321,29 @@ function ZapTable({ zaps }: { zaps: Zap[] }) {
             </div>
 
             {/* Action Button */}
-            <div className="w-20 flex justify-center">
+            <div className="w-64 flex items-center justify-end gap-3">
+              <ZapToggle zap={z} onToggle={onToggle} />
+              <button
+                type="button"
+                className="text-sm text-slate-700 hover:text-slate-900"
+                onClick={() => router.push(`/zap/${z.id}/runs`)}
+              >
+                Runs
+              </button>
+              <button
+                type="button"
+                className="text-sm text-blue-600 hover:text-blue-800"
+                onClick={() => router.push(`/zap/create?edit=${z.id}`)}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className="text-sm text-red-600 hover:text-red-800"
+                onClick={() => onDelete(z.id)}
+              >
+                Delete
+              </button>
               <LinkButton onClick={() => router.push("/zap/" + z.id)}>
                 Go
               </LinkButton>
@@ -248,5 +352,26 @@ function ZapTable({ zaps }: { zaps: Zap[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function ZapToggle({ zap, onToggle }: { zap: Zap; onToggle: (zapId: string) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={zap.isActive}
+      aria-label={`Turn ${zap.isActive ? "off" : "on"} Zap ${zap.id}`}
+      onClick={() => onToggle(zap.id)}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+        zap.isActive ? "bg-green-600" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          zap.isActive ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
   );
 }

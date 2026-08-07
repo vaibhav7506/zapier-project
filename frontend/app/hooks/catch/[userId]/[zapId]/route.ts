@@ -11,6 +11,19 @@ export async function POST(
   const { zapId } = await params;
   const metadata = await request.json();
 
+  const zap = await prismaClient.zap.findUnique({
+    where: { id: zapId },
+    select: { isActive: true },
+  });
+
+  if (!zap) {
+    return NextResponse.json({ message: "Zap not found" }, { status: 404 });
+  }
+
+  if (!zap.isActive) {
+    return NextResponse.json({ status: "ignored, zap disabled" });
+  }
+
   const run = await prismaClient.$transaction(async (transaction) => {
     const run = await transaction.zapRun.create({
       data: { zapId, metadata },
