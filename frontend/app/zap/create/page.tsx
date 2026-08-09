@@ -264,6 +264,26 @@ function Modal({ index, onSelect, availableItems, initialMetadata }: {
             <EmailSelector initialMetadata={initialMetadata} setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
           )}
 
+          {step === 1 && selectedAction?.id === "discord" && (
+            <DiscordSelector initialMetadata={initialMetadata} setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
+          )}
+
+          {step === 1 && selectedAction?.id === "slack" && (
+            <SlackSelector initialMetadata={initialMetadata} setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
+          )}
+
+          {step === 1 && selectedAction?.id === "telegram" && (
+            <TelegramSelector initialMetadata={initialMetadata} setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
+          )}
+
+          {step === 1 && selectedAction?.id === "sms" && (
+            <SmsSelector initialMetadata={initialMetadata} setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
+          )}
+
+          {step === 1 && selectedAction?.id === "google-sheets" && (
+            <GoogleSheetsSelector initialMetadata={initialMetadata} setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
+          )}
+
           {step === 1 && selectedAction?.id === "send-sol" && (
             <SolanaSelector initialMetadata={initialMetadata} setMetadata={(m) => onSelect({ ...selectedAction, metadata: m })} />
           )}
@@ -307,6 +327,84 @@ function EmailSelector({ initialMetadata, setMetadata }: { initialMetadata: Reco
       <Input label="To" placeholder="example@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
       <Input label="Body" placeholder="Hello there..." value={body} onChange={(e) => setBody(e.target.value)} />
       <PrimaryButton onClick={() => setMetadata({ email, body })}>Continue</PrimaryButton>
+    </div>
+  );
+}
+
+function DiscordSelector({ initialMetadata, setMetadata }: { initialMetadata: Record<string, unknown>; setMetadata: (m: any) => void }) {
+  const [webhookUrl, setWebhookUrl] = useState(String(initialMetadata.webhookUrl || ""));
+
+  return (
+    <div className="space-y-4">
+      <Input
+        label="Discord Webhook URL"
+        placeholder="https://discord.com/api/webhooks/..."
+        value={webhookUrl}
+        onChange={(e) => setWebhookUrl(e.target.value)}
+      />
+      <PrimaryButton onClick={() => setMetadata({ webhookUrl })}>Continue</PrimaryButton>
+    </div>
+  );
+}
+
+function SlackSelector({ initialMetadata, setMetadata }: { initialMetadata: Record<string, unknown>; setMetadata: (m: any) => void }) {
+  const [webhookUrl, setWebhookUrl] = useState(String(initialMetadata.webhookUrl || ""));
+
+  return (
+    <div className="space-y-4">
+      <Input
+        label="Slack Incoming Webhook URL"
+        placeholder="https://hooks.slack.com/services/..."
+        value={webhookUrl}
+        onChange={(e) => setWebhookUrl(e.target.value)}
+      />
+      <PrimaryButton onClick={() => setMetadata({ webhookUrl })}>Continue</PrimaryButton>
+    </div>
+  );
+}
+
+function TelegramSelector({ initialMetadata, setMetadata }: { initialMetadata: Record<string, unknown>; setMetadata: (m: any) => void }) {
+  const [botToken, setBotToken] = useState(String(initialMetadata.botToken || ""));
+  const [chatId, setChatId] = useState(String(initialMetadata.chatId || ""));
+
+  return (
+    <div className="space-y-4">
+      <Input label="Telegram Bot Token" placeholder="123456:ABC..." value={botToken} onChange={(e) => setBotToken(e.target.value)} />
+      <Input label="Telegram Chat ID" placeholder="-1001234567890" value={chatId} onChange={(e) => setChatId(e.target.value)} />
+      <PrimaryButton onClick={() => setMetadata({ botToken, chatId })}>Continue</PrimaryButton>
+    </div>
+  );
+}
+
+function SmsSelector({ initialMetadata, setMetadata }: { initialMetadata: Record<string, unknown>; setMetadata: (m: any) => void }) {
+  const [phoneNumber, setPhoneNumber] = useState(String(initialMetadata.phoneNumber || ""));
+
+  return (
+    <div className="space-y-4">
+      <Input
+        label="Destination Phone Number"
+        placeholder="+15551234567"
+        type="tel"
+        value={phoneNumber}
+        onChange={(e) => setPhoneNumber(e.target.value)}
+      />
+      <PrimaryButton onClick={() => setMetadata({ phoneNumber })}>Continue</PrimaryButton>
+    </div>
+  );
+}
+
+function GoogleSheetsSelector({ initialMetadata, setMetadata }: { initialMetadata: Record<string, unknown>; setMetadata: (m: any) => void }) {
+  const [spreadsheetId, setSpreadsheetId] = useState(String(initialMetadata.spreadsheetId || ""));
+  const [sheetName, setSheetName] = useState(String(initialMetadata.sheetName || ""));
+
+  return (
+    <div className="space-y-4">
+      <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+        Share this spreadsheet with the service account email configured for this deployment before publishing.
+      </p>
+      <Input label="Google Sheet ID" placeholder="Spreadsheet ID from its URL" value={spreadsheetId} onChange={(e) => setSpreadsheetId(e.target.value)} />
+      <Input label="Sheet / Tab Name" placeholder="Sheet1" value={sheetName} onChange={(e) => setSheetName(e.target.value)} />
+      <PrimaryButton onClick={() => setMetadata({ spreadsheetId, sheetName })}>Continue</PrimaryButton>
     </div>
   );
 }

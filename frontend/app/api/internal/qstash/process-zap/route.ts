@@ -1,4 +1,5 @@
 import { Receiver } from "@upstash/qstash";
+import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { prismaClient } from "@/lib/server/db";
 import { sendEmail } from "@/lib/server/email";
@@ -113,6 +114,106 @@ async function processZapRun(message: ZapRunMessage) {
       body,
       `<zap-run-${execution.id}@automation.local>`,
     );
+  } else if (action.type.id === "discord") {
+    const webhookUrl = String(metadata.webhookUrl ?? "");
+    if (!webhookUrl) {
+      throw new Error("Discord webhook URL is required");
+    }
+
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: JSON.stringify(zapRun.metadata) }),
+    });
+    if (!response.ok) {
+      throw new Error(`Discord webhook request failed with status ${response.status}`);
+    }
+  } else if (action.type.id === "slack") {
+    const webhookUrl = String(metadata.webhookUrl ?? "");
+    if (!webhookUrl) {
+      throw new Error("Slack webhook URL is required");
+    }
+
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: JSON.stringify(zapRun.metadata) }),
+    });
+    if (!response.ok) {
+      throw new Error(`Slack webhook request failed with status ${response.status}`);
+    }
+  } else if (action.type.id === "telegram") {
+    const botToken = String(metadata.botToken ?? "");
+    const chatId = String(metadata.chatId ?? "");
+    if (!botToken || !chatId) {
+      throw new Error("Telegram bot token and chat ID are required");
+    }
+
+    const response = await fetch(
+      `https://api.telegram.org/bot${encodeURIComponent(botToken)}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: JSON.stringify(zapRun.metadata) }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Telegram sendMessage request failed with status ${response.status}`);
+    }
+  } else if (action.type.id === "sms") {
+    const destination = String(metadata.phoneNumber ?? "");
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const fromNumber = process.env.TWILIO_FROM_NUMBER;
+    if (!destination || !accountSid || !authToken || !fromNumber) {
+      throw new Error("Twilio credentials and SMS destination phone number are required");
+    }
+
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          To: destination,
+          From: fromNumber,
+          Body: JSON.stringify(zapRun.metadata),
+        }).toString(),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Twilio Messages API request failed with status ${response.status}`);
+    }
+  } else if (action.type.id === "google-sheets") {
+    const spreadsheetId = String(metadata.spreadsheetId ?? "");
+    const sheetName = String(metadata.sheetName ?? "");
+    const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+    if (!spreadsheetId || !sheetName || !serviceAccountKey) {
+      throw new Error("Google Sheets configuration and service account key are required");
+    }
+
+    let credentials: { client_email?: string; private_key?: string; project_id?: string };
+    try {
+      credentials = JSON.parse(serviceAccountKey);
+    } catch {
+      throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY must contain valid JSON");
+    }
+
+    const auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+    const sheets = google.sheets({ version: "v4", auth });
+    const escapedSheetName = sheetName.replace(/'/g, "''");
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: `'${escapedSheetName}'!A:A`,
+      valueInputOption: "RAW",
+      requestBody: { values: [[JSON.stringify(zapRun.metadata)]] },
+    });
   } else if (action.type.id === "send-sol") {
     if (!execution.solanaTransaction || !execution.solanaSignature || !execution.solanaLastValidBlockHeight) {
       const recipient = parse(String(metadata.address ?? ""), zapRun.metadata);
