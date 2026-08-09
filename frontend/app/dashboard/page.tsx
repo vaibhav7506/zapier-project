@@ -115,16 +115,31 @@ function useZaps() {
     }
   };
 
+  const sendTestEvent = async (zap: Zap) => {
+    try {
+      await axios.post(`${HOOKS_URL}/hooks/catch/${zap.userId}/${zap.id}`, {
+        name: "Test User",
+        email: "test@example.com",
+        message: "This is a test event sent from the dashboard.",
+      });
+      alert("Test event sent! Check 'View runs' in a few seconds to see it execute.");
+    } catch (error) {
+      console.error("Error sending test event:", error);
+      alert("Failed to send test event. Check the console for details.");
+    }
+  };
+
   return {
     loading,
     zaps,
     toggleZap,
     deleteZap,
+    sendTestEvent,
   };
 }
 
 export default function DashboardPage() {
-  const { loading, zaps, toggleZap, deleteZap } = useZaps();
+  const { loading, zaps, toggleZap, deleteZap, sendTestEvent } = useZaps();
   const router = useRouter();
 
   return (
@@ -145,7 +160,7 @@ export default function DashboardPage() {
       ) : (
         <div className="flex justify-center overflow-x-auto">
           {" "}
-          <ZapTable zaps={zaps} onToggle={toggleZap} onDelete={deleteZap} />{" "}
+          <ZapTable zaps={zaps} onToggle={toggleZap} onDelete={deleteZap} onTest={sendTestEvent} />{" "}
         </div>
       )}
     </div>
@@ -156,10 +171,12 @@ function ZapTable({
   zaps,
   onToggle,
   onDelete,
+  onTest,
 }: {
   zaps: Zap[];
   onToggle: (zapId: string) => void;
   onDelete: (zapId: string) => void;
+  onTest: (zap: Zap) => void;
 }) {
   const router = useRouter();
 
@@ -229,19 +246,21 @@ function ZapTable({
               <span className="text-xs font-semibold text-gray-500 w-20 shrink-0">
                 Webhook:
               </span>
-              <a
-                href={`${HOOKS_URL}/hooks/catch/${z.userId}/${z.id}`}
-                className="text-xs text-blue-600 hover:text-blue-800 underline break-all flex-1"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <span className="text-xs text-gray-700 break-all flex-1">
                 {`${HOOKS_URL}/hooks/catch/${z.userId}/${z.id}`}
-              </a>
+              </span>
             </div>
 
             {/* Action Button */}
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <ZapToggle zap={z} onToggle={onToggle} />
+              <button
+                type="button"
+                className="text-sm text-green-700 hover:text-green-900 font-medium"
+                onClick={() => onTest(z)}
+              >
+                Send Test Event
+              </button>
               <button
                 type="button"
                 className="text-sm text-slate-700 hover:text-slate-900"
@@ -309,15 +328,14 @@ function ZapTable({
 
             {/* Webhook URL */}
             <div className="flex-1 min-w-[140px]">
-              <a
-                href={`${HOOKS_URL}/hooks/catch/${z.userId}/${z.id}`}
-                className="text-xs text-blue-600 hover:text-blue-800 underline truncate block"
+              <button
+                type="button"
+                className="text-xs text-green-700 hover:text-green-900 font-medium underline"
                 title={`${HOOKS_URL}/hooks/catch/${z.userId}/${z.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
+                onClick={() => onTest(z)}
               >
-                View webhook
-              </a>
+                Send Test Event
+              </button>
             </div>
 
             {/* Action Button */}
