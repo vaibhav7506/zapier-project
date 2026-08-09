@@ -16,6 +16,7 @@ interface Zap {
   isActive: boolean;
  
   // "createdAt": string,
+  createdAt: string;
   actions: {
     id: string;
     zapId: string;
@@ -241,6 +242,20 @@ function ZapTable({
               </span>
             </div>
 
+            {/* Created at */}
+            <div className="flex items-start gap-3">
+              <span className="text-xs font-semibold text-gray-500 w-20 shrink-0">
+                Created:
+              </span>
+              <span className="text-xs text-gray-700 flex-1">
+                {new Date(z.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+
             {/* Webhook URL */}
             <div className="flex items-start gap-3">
               <span className="text-xs font-semibold text-gray-500 w-20 shrink-0">
@@ -323,7 +338,13 @@ function ZapTable({
 
             {/* Created at */}
             <div className="flex-1 min-w-[100px]">
-              <span className="text-sm text-gray-600">Nov 13, 2023</span>
+              <span className="text-sm text-gray-600">
+                {new Date(z.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
             </div>
 
             {/* Webhook URL */}
