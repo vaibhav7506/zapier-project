@@ -6,7 +6,7 @@ async function main() {
     {
       id: "webhook",
       name: "Webhook",
-      image: "https://static-00.iconduck.com/assets.00/webhook-icon-512x488-76v98s9z.png",
+      image: "https://cdn-icons-png.flaticon.com/512/2985/2985150.png",
     },
     {
       id: "solana",
@@ -28,7 +28,7 @@ async function main() {
     {
       id: "discord",
       name: "Discord",
-      image: "https://cdn.simpleicons.org/discord/5865F2",
+      image: "https://cdn-icons-png.flaticon.com/512/2111/2111370.png",
     },
     {
       id: "slack",
@@ -38,7 +38,7 @@ async function main() {
     {
       id: "telegram",
       name: "Telegram",
-      image: "https://cdn.simpleicons.org/telegram/26A5E4",
+      image: "https://cdn-icons-png.flaticon.com/512/2111/2111646.png",
     },
     {
       id: "sms",
@@ -48,7 +48,7 @@ async function main() {
     {
       id: "google-sheets",
       name: "Google Sheets",
-      image: "https://cdn.simpleicons.org/googlesheets/34A853",
+      image: "https://cdn-icons-png.flaticon.com/512/337/337946.png",
     },
   ];
 
